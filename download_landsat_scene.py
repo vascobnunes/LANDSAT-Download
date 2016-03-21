@@ -162,7 +162,7 @@ def next_overpass(date1,path,sat):
     return(date_overpass)
 
 #############################"Get metadata files
-def getmetadatafiles(destdir,option):
+def getmetadatafiles(destdir,option,proxy):
     print 'Verifying catalog metadata files...'
     home = 'http://landsat.usgs.gov/metadata_service/bulk_metadata_files/'
     links=['LANDSAT_8.csv','LANDSAT_ETM.csv','LANDSAT_ETM_SLC_OFF.csv','LANDSAT_TM-1980-1989.csv','LANDSAT_TM-1990-1999.csv','LANDSAT_TM-2000-2009.csv','LANDSAT_TM-2010-2012.csv']
@@ -172,9 +172,16 @@ def getmetadatafiles(destdir,option):
         if option=='noupdate':
             if not os.path.exists(destfile):
                 print 'Downloading %s for the first time...'%(l)
-                urllib.urlretrieve (url, destfile)
+                if proxy==None or proxy=='':
+                    #urllib.urlretrieve (url, destfile)
+                    subprocess.call('curl '+url+' '+'-o '+destfile, shell=True)					
+                else:
+                    subprocess.call('curl -x '+proxy+' '+url+' '+'-o '+destfile, shell=True)				
         elif option=='update':	
-            urllib.urlretrieve (url, destfile)
+            if proxy==None or proxy=='':
+                subprocess.call('curl '+url+' '+'-o '+destfile, shell=True)
+            else:
+                subprocess.call('curl -x '+proxy+' '+url+' '+'-o '+destfile, shell=True)	
 	
 #############################"Unzip tgz file
 	
@@ -467,18 +474,20 @@ def main():
 	        date_end =datetime.datetime(year_end,month_end, day_end)
         else:
 	        date_end=datetime.datetime.now()
-	
+			
         if options.proxy!=None:
+            prx=host+':'+port
             connect_earthexplorer_proxy(proxy,usgs)
         else:
-            connect_earthexplorer_no_proxy(usgs)	
+            connect_earthexplorer_no_proxy(usgs)
+            prx=''			
 
         # rep_scene="%s/SCENES/%s_%s/GZ"%(rep,path,row)   #Original
         rep_scene="%s"%(rep)	#Modified vbnunes
         if not(os.path.exists(rep_scene)):
             os.makedirs(rep_scene)
 
-        getmetadatafiles(options.outputcatalogs, options.updatecatalogfiles)			
+        getmetadatafiles(options.outputcatalogs, options.updatecatalogfiles, prx)			
 			
         if produit.startswith('LC8'):
             repert=['4923']
